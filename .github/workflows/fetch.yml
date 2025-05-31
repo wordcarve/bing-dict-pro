@@ -1,0 +1,64 @@
+name: Batch Fetch Dictionary and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_release:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run batch.py
+        env:
+          PYTHONIOENCODING: UTF-8
+        run: python batch.py
+
+      - name: Get poem and current datetime
+        id: get_info
+        shell: pwsh
+        run: |
+          $CurrentDateTime = (Get-Date -Format "yyyyMMdd-HHmmss")
+          $Poem = Invoke-RestMethod -Uri "https://v1.hitokoto.cn/?c=i&encode=text&min_length=10&max_length=16"
+          
+          if ($Poem.EndsWith("。") -or $Poem.EndsWith("？") -or $Poem.EndsWith("!")) {
+              $Poem = $Poem.Substring(0, $Poem.Length - 1)
+          }
+
+          if ([string]::IsNullOrWhiteSpace($Poem)) {
+            $Poem = "青青子衿，悠悠我心"
+          }
+          if ($Poem.Length -gt 100) {
+            $Poem = "$($Poem.Substring(0, 100))..."
+          }
+          
+          echo "release_tag=$CurrentDateTime" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          echo "release_name=$Poem" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_info.outputs.release_tag }}
+          name: ${{ steps.get_info.outputs.release_name }}
+          draft: false
+          prerelease: false
+          files: dictionary.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
