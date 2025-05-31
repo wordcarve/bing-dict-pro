@@ -62,3 +62,6 @@ coverage.xml
 
 # System files
 Thumbs.db
+
+# json
+dictionary.json
