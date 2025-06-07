@@ -1,0 +1,47 @@
+{
+  "headword": "apply",
+  "pronunciations": {
+    "US": "[əˈplaɪ]",
+    "UK": "[əˈplaɪ]"
+  },
+  "definitions": {
+    "权威英汉双解": [
+      {
+        "part_of_speech": "v.",
+        "senses": [
+          {
+            "sense_number": "1",
+            "sense_label": "求职；办手续 for job/course",
+            "definition": {
+              "Chinese": "（通常以书面形式）申请，请求",
+              "English": "to make a formal request, usually in writing, for sth such as a job, a place at college, university, etc."
+            },
+            "grammar_tags": ["[i]", "[t]"],
+            "pattern": "",
+            "examples": [
+              {"English": "You should apply in person/by letter.", "Chinese": "你应该当面╱写信申请。"},
+              {"English": "to apply for a job/passport/grant", "Chinese": "申请工作╱护照╱拨款"}
+            ]
+          },
+          {
+            "sense_number": "3",
+            "sense_label": "油漆；乳剂 paint/cream",
+            "definition": {
+              "Chinese": "涂；敷；施",
+              "English": "to put or spread sth such as paint, cream, etc. onto a surface"
+            },
+            "grammar_tags": ["[t]"],
+            "pattern": "~ sth (to sth)",
+            "examples": [
+              {"English": "Apply the cream sparingly to your face and neck.", "Chinese": "把乳霜薄薄地抹在脸和脖子上。"}
+            ]
+          }
+        ],
+        "idioms": []
+      }
+    ]
+  },
+  "collocations": [],
+  "synonyms": [],
+  "antonyms": []
+}

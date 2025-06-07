@@ -1,32 +1,47 @@
-import csv
-import json
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from bing import fetch_bing_dictionary
+import re # 导入正则表达式模块
 
-def read_words_from_csv(csv_file_path):
+def read_words_from_txt(file_path):
     """
-    从CSV文件读取所有合法单词（非数字开头），返回单词列表。
+    从TXT文件读取单词，一行一个，只保留纯英文字母的单词。
     """
     words = []
-    with open(csv_file_path, mode='r', encoding='utf-8') as infile:
-        reader = csv.DictReader(infile)
-        for row in reader:
-            word = row.get('word')
-            if word and not word[0].isdigit():
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            word = line.strip() # 移除行首尾的空白字符
+            # 检查单词是否只包含英文字母
+            if re.fullmatch(r'[a-zA-Z]+', word):
                 words.append(word)
     return words
 
-def fetch_word(word):
+# 以下是你的原始代码，保持不变
+import json
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from bing import fetch_bing_dictionary # 确保这里导入的是修改后的 bing.py
+
+def fetch_word(word, max_retries=5, initial_delay=1):
     """
-    查询单个单词，返回 {word: data} 结构。
+    查询单个单词，如果 fetch_bing_dictionary 抛出异常，则会重试。
+    :param word: 要查询的单词。
+    :param max_retries: 最大重试次数。
+    :param initial_delay: 初始重试延迟（秒）。
     """
-    try:
-        data = fetch_bing_dictionary(word)
-        return {word: data}
-    except Exception as e:
-        print(f"查询单词 '{word}' 时出错: {e}")
-        return {word: None}
+    retries = 0
+    while retries < max_retries:
+        try:
+            data = fetch_bing_dictionary(word)
+            # 如果 fetch_bing_dictionary 成功返回数据，则认为成功
+            return {word: data}
+        except Exception as e: # 捕获所有可能来自 fetch_bing_dictionary 的异常
+            if 'definitions' in str(e):
+                return {word: None}  # 如果是定义未找到的异常，直接返回 None
+            print(f"查询单词 '{word}' 失败: {e}，正在重试 ({retries + 1}/{max_retries})...")
+            retries += 1
+            time.sleep(initial_delay * (2 ** (retries - 1))) # 指数退避重试
+    
+    print(f"查询单词 '{word}' 失败，已达到最大重试次数。")
+    return {word: None}
 
 def append_json_object_to_array(file_path, obj, lock):
     """
@@ -49,11 +64,11 @@ def append_json_object_to_array(file_path, obj, lock):
         except Exception as e:
             print(f"写入JSON文件时出错: {e}")
 
-def batch_fetch_dictionary_multithread(csv_file_path, output_json_path, max_workers=8):
+def batch_fetch_dictionary_multithread(input_file_path, output_json_path, max_workers=8):
     """
     多线程批量查询单词并实时写入JSON文件（始终闭合数组）。
     """
-    words = read_words_from_csv(csv_file_path)
+    words = read_words_from_txt(input_file_path) # 调用新的读取函数
     print(f"共需查询 {len(words)} 个单词...")
     # 初始化JSON文件为[]
     with open(output_json_path, 'w', encoding='utf-8') as f:
@@ -68,11 +83,10 @@ def batch_fetch_dictionary_multithread(csv_file_path, output_json_path, max_work
                 append_json_object_to_array(output_json_path, result, lock)
                 print(f"单词 '{word}' 查询并写入完成.")
             except Exception as exc:
-                print(f"单词 '{word}' 查询时发生异常: {exc}")
-                append_json_object_to_array(output_json_path, {word: None}, lock)
+                print(f"处理单词 '{word}' 的结果时发生异常: {exc}")
     print(f"所有查询已完成，结果已实时保存到 {output_json_path}")
 
 if __name__ == "__main__":
-    input_csv = 'protoWords.csv'
+    input_txt = 'coca60000.txt' # 将输入文件改为.txt
     output_json = 'dictionary.json'
-    batch_fetch_dictionary_multithread(input_csv, output_json, max_workers=16)
+    batch_fetch_dictionary_multithread(input_txt, output_json, max_workers=32)
